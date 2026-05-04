@@ -1,6 +1,8 @@
-# bokeh-mediaserver
+# Bokeh Media Server
 
-Personal media server focused on photo viewing. Built in Go.
+A media server for viewing and sharing your personal photo, audio, and video collections.
+
+Designed with speed and efficiency in mind. Capable of running on a Raspberry Pi 4 without lagging. (Though scanning a large image library will of course take some time.)
 
 ## Quick start (development)
 
@@ -87,30 +89,3 @@ docker buildx build \
 | `WORKER_COUNT` | `2` | Max parallel indexer workers |
 | `LOG_LEVEL` | `warn` | `error` / `warn` / `info` / `debug` |
 | `LOG_PATH` | stdout | Log file path (`/tmp/mediaserver.log` recommended on Pi) |
-
-## API summary
-
-See `docs/api.md` for full documentation.
-
-```
-POST  /api/v1/auth/login
-GET   /api/v1/auth/me
-GET   /api/v1/collections
-GET   /api/v1/collections/:id
-GET   /api/v1/collections/:id/collections
-GET   /api/v1/collections/:id/items
-GET   /api/v1/collections/:id/slideshow
-GET   /api/v1/media/:id
-GET   /api/v1/media/:id/exif
-GET   /images/:id/:variant          (thumb|small|preview|large)
-GET   /images/:id/tiles/image.dzi
-GET   /images/:id/tiles/*
-
-POST  /api/v1/admin/collections
-GET   /api/v1/admin/collections
-POST  /api/v1/admin/collections/:id/scan
-GET   /api/v1/admin/jobs/:id
-GET   /api/v1/admin/jobs/:id/events  (SSE)
-
-GET   /api/v1/system/health
-```
