@@ -127,6 +127,7 @@ func NewRouter(db *pgxpool.Pool, guard *DeviceGuard, dispatcher *jobs.Dispatcher
 
 		// Video streaming
 		r.Get("/videos/{id}/stream", video.stream)
+		r.Head("/videos/{id}/stream", video.stream)
 		r.Get("/videos/{id}/raw", video.raw)
 		r.Head("/videos/{id}/raw", video.raw)
 		r.Get("/videos/{id}/hls/manifest.m3u8", video.hlsManifest)
