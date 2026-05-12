@@ -13,11 +13,15 @@ import (
 
 // extractExif runs exiftool on fsPath using et. On failure or if et is nil,
 // logs a warning and returns an empty (non-nil) map.
-func extractExif(et *jobsutils.ExiftoolProcess, fsPath, warnMsg string) map[string]any {
+//
+// stripBinaryTags is passed through to ExiftoolProcess.Extract — see the doc
+// comment there for the trade-off between noise-in-storage and detection of
+// embedded binary tags.
+func extractExif(et *jobsutils.ExiftoolProcess, fsPath, warnMsg string, includeBinaryTags bool) map[string]any {
 	if et == nil {
 		return map[string]any{}
 	}
-	data, err := et.Extract(fsPath)
+	data, err := et.Extract(fsPath, includeBinaryTags)
 	if err != nil {
 		slog.Warn(warnMsg, "path", fsPath, "err", err)
 		return map[string]any{}

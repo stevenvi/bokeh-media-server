@@ -37,7 +37,8 @@ func HandleScanPhoto(mediaPath, dataPath string) jobs.JobHandler {
 		fsPath := filepath.Join(mediaPath, relativePath)
 
 		// Extract EXIF
-		exifData := extractExif(jc.Et, fsPath, "exiftool extract failed")
+		// Ignore binary tags as this is just noise here
+		exifData := extractExif(jc.Et, fsPath, "exiftool extract failed", false)
 
 		// Update title from exiftool composite Title if available
 		if title := jobsutils.ExifStr(exifData, "Title"); title != nil && *title != "" {

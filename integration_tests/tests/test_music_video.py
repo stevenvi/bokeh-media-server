@@ -223,6 +223,41 @@ class TestMusicCollection:
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("audio/")
 
+    def test_07_album_covers_extracted(self, admin_token):
+        """
+        Album cover art should be extracted from the first track on each album
+        that has an embedded picture.
+
+        Testdata layout:
+          - album-alpha/01-first-light.mp3 has image embedded
+          - album-beta/02-finale.mp3 has image embedded (track 01 has none)
+
+        Both albums should therefore have a cover served at /images/albums/{id}/thumb
+        and /images/albums/{id}/cover, and the two albums' covers must differ
+        (proving the server picked the right track and isn't always defaulting
+        to track 01).
+        """
+        if not TestMusicCollection.album_alpha_id or not TestMusicCollection.album_beta_id:
+            pytest.fail("albums not found — test_03 must have failed")
+
+        def fetch_image(path: str) -> bytes:
+            r = httpx.get(f"{BASE_URL}{path}", headers=bearer(admin_token))
+            assert r.status_code == 200, f"{path} returned {r.status_code}: {r.text}"
+            assert r.headers["content-type"].startswith("image/"), \
+                f"{path} content-type is {r.headers.get('content-type')}"
+            assert len(r.content) > 0, f"{path} returned empty body"
+            return r.content
+
+        alpha_thumb = fetch_image(f"/images/albums/{TestMusicCollection.album_alpha_id}/thumb")
+        alpha_cover = fetch_image(f"/images/albums/{TestMusicCollection.album_alpha_id}/cover")
+        beta_thumb  = fetch_image(f"/images/albums/{TestMusicCollection.album_beta_id}/thumb")
+        beta_cover  = fetch_image(f"/images/albums/{TestMusicCollection.album_beta_id}/cover")
+
+        # The two albums use different source images, so their generated
+        # covers must not be byte-identical.
+        assert alpha_thumb != beta_thumb, "album thumbs match — likely missing/wrong cover source"
+        assert alpha_cover != beta_cover, "album covers match — likely missing/wrong cover source"
+
 
 # ── Movies: video:movie ───────────────────────────────────────────────────────
 

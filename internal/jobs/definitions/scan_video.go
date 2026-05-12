@@ -47,7 +47,9 @@ func HandleScanVideo(mediaPath, dataPath string, transcodeBitrateKbps int) jobs.
 		fsPath := filepath.Join(mediaPath, relativePath)
 
 		// --- Step 1: exiftool extraction ---
-		exifData := extractExif(jc.Et, fsPath, "exiftool extract failed for video")
+		// Include binary tags as cover art detection relies on the key
+		// being present in the returned tag map.
+		exifData := extractExif(jc.Et, fsPath, "exiftool extract failed for video", true)
 
 		// Duration
 		durationFloat := parseDuration(exifData)

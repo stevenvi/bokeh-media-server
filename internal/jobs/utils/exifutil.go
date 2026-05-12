@@ -66,12 +66,21 @@ func NewExiftoolProcess() (*ExiftoolProcess, error) {
 
 // Extract sends a single file path to the running exiftool process and
 // returns its metadata as a raw map. Thread-safe via mutex.
-func (e *ExiftoolProcess) Extract(path string) (map[string]any, error) {
+//
+// includeBinaryTags controls whether binary tags (embedded thumbnails, album art,
+// preview images, etc.) are excluded from the output. Note that these will just
+// be placeholder values like "(Binary data 4321 bytes, use -b option to extract)"
+// and not the actual binary data. Use the ExtractBinary function to obtain the
+// actual bytes stored in that tag.
+func (e *ExiftoolProcess) Extract(path string, includeBinaryTags bool) (map[string]any, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	// Pass data to exiftool: exclude binary tags flag, filename, and -execute sentinel
-	if _, err := fmt.Fprintf(e.stdin, "--binary\n%s\n-execute\n", path); err != nil {
+	cmd := fmt.Sprintf("%s\n-execute\n", path)
+	if !includeBinaryTags {
+		cmd = "--binary\n" + cmd
+	}
+	if _, err := fmt.Fprint(e.stdin, cmd); err != nil {
 		return nil, fmt.Errorf("write to exiftool: %w", err)
 	}
 

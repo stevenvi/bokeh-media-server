@@ -35,8 +35,10 @@ func HandleScanAudio(mediaPath, dataPath string) jobs.JobHandler {
 
 		fsPath := filepath.Join(mediaPath, relativePath)
 
-		// Extract tags via exiftool
-		exifData := extractExif(jc.Et, fsPath, "exiftool extract failed for audio")
+		// Extract tags via exiftool.
+		// Include binary tags as album art detection relies on the key
+		// being present in the returned tag map.
+		exifData := extractExif(jc.Et, fsPath, "exiftool extract failed for audio", true)
 
 		// Extract tag values
 		title := jobsutils.ExifStr(exifData, "Title")
