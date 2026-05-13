@@ -10,6 +10,7 @@ import (
 	authpkg "github.com/stevenvi/bokeh-mediaserver/internal/auth"
 	"github.com/stevenvi/bokeh-mediaserver/internal/config"
 	"github.com/stevenvi/bokeh-mediaserver/internal/jobs"
+	"github.com/stevenvi/bokeh-mediaserver/internal/version"
 )
 
 // NewRouter builds and returns the fully configured Chi router.
@@ -57,10 +58,11 @@ func NewRouter(db *pgxpool.Pool, guard *DeviceGuard, dispatcher *jobs.Dispatcher
 
 	// ── Public ────────────────────────────────────────────────────────────────
 	r.Get("/api/v1/system/version", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		// TODO: Mange the version here
-		_, _ = w.Write([]byte("0.0.0"))
+		writeJSON(w, http.StatusOK, map[string]string{
+			"version":  version.Version,
+			"commit":   version.Commit,
+			"built_at": version.BuiltAt,
+		})
 	})
 
 	r.Get("/api/v1/system/health", func(w http.ResponseWriter, r *http.Request) {

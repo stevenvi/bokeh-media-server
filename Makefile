@@ -6,11 +6,26 @@ DOCKER_COMPOSE_UNIT     := docker-compose.unit-test.yml
 DOCKER_COMPOSE_INTEG    := ./integration_tests/docker-compose.yml
 PYTEST_DIR              := ./integration_tests
 
+# ── Version metadata (injected at build time) ─────────────────────────────────
+# VERSION:   nearest git tag (with v-prefix stripped), plus -N-gSHA when not
+#            built directly from a tag, plus -dirty when the working tree has
+#            uncommitted changes. Falls back to "dev" if git is unavailable.
+# COMMIT:    short commit SHA.
+# BUILT_AT:  build timestamp in UTC ISO-8601.
+VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null | sed 's/^v//' || echo dev)
+COMMIT   ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+BUILT_AT ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+
+VERSION_PKG := github.com/stevenvi/bokeh-mediaserver/internal/version
+LDFLAGS     := -X $(VERSION_PKG).Version=$(VERSION) \
+               -X $(VERSION_PKG).Commit=$(COMMIT) \
+               -X $(VERSION_PKG).BuiltAt=$(BUILT_AT)
+
 # ── Top-level targets ─────────────────────────────────────────────────────────
 all: lint test
 
 build:
-	go build ./..
+	go build -ldflags="$(LDFLAGS)" ./...
 
 setup:
 	cp scripts/hooks/pre-commit .git/hooks/pre-commit

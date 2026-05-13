@@ -64,9 +64,20 @@ RUN go mod download
 
 COPY . .
 
+# Version metadata — passed in by the build system (e.g. `docker compose build
+# --build-arg VERSION=$(git describe --tags --always --dirty | sed s/^v//)`).
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILT_AT=unknown
+
 # CGO_ENABLED=1 required for bimg (libvips bindings)
 # GOARCH is set by Docker BuildKit automatically for multi-platform builds
-RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o /bin/mediaserver ./cmd/server
+RUN CGO_ENABLED=1 go build \
+        -ldflags="-s -w \
+            -X github.com/stevenvi/bokeh-mediaserver/internal/version.Version=${VERSION} \
+            -X github.com/stevenvi/bokeh-mediaserver/internal/version.Commit=${COMMIT} \
+            -X github.com/stevenvi/bokeh-mediaserver/internal/version.BuiltAt=${BUILT_AT}" \
+        -o /bin/mediaserver ./cmd/server
 
 # ── Runtime stage ───────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
