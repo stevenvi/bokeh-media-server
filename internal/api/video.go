@@ -4,6 +4,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -389,6 +390,31 @@ func (h *videoHandler) uploadCover(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := repository.VideoSetManualThumbnail(r.Context(), h.db, id, true); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update video metadata")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// DELETE /api/v1/admin/media/{id}/cover
+// Removes a manually-uploaded video cover image. The next thumbnail scan will
+// regenerate one from embedded art or a video frame.
+func (h *videoHandler) deleteCover(w http.ResponseWriter, r *http.Request) {
+	id, ok := urlIntParam(w, r, "id")
+	if !ok {
+		return
+	}
+
+	_, _, fileHash, err := repository.MediaItemGetVideoStreamInfo(r.Context(), h.db, id, userIDFromRequest(r))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "video not found")
+		return
+	}
+
+	_ = os.Remove(imaging.VariantPath(h.dataPath, fileHash, "cover", "webp"))
+
+	if err := repository.VideoSetManualThumbnail(r.Context(), h.db, id, false); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update video metadata")
 		return
 	}

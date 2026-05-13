@@ -445,6 +445,25 @@ func (h *adminHandler) uploadCollectionCover(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DELETE /api/v1/admin/collections/{id}/cover
+// Removes a manually-uploaded collection cover image. The next thumbnail scan
+// will regenerate one from the collection's contents.
+func (h *adminHandler) deleteCollectionCover(w http.ResponseWriter, r *http.Request) {
+	collectionID, ok := urlIntParam(w, r, "id")
+	if !ok {
+		return
+	}
+
+	_ = os.Remove(imaging.CollectionThumbnailPath(h.dataPath, collectionID, "webp"))
+
+	if err := repository.CollectionSetManualThumbnail(r.Context(), h.db, collectionID, false); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update collection")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GET /api/v1/admin/users
 func (h *adminHandler) listUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := repository.UsersGet(r.Context(), h.db)

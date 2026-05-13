@@ -167,6 +167,7 @@ func NewRouter(db *pgxpool.Pool, guard *DeviceGuard, dispatcher *jobs.Dispatcher
 		r.Post("/api/v1/admin/collections", admin.createCollection)
 		r.Delete("/api/v1/admin/collections/{id}", admin.deleteCollection)
 		r.Post("/api/v1/admin/collections/{id}/cover", admin.uploadCollectionCover)
+		r.Delete("/api/v1/admin/collections/{id}/cover", admin.deleteCollectionCover)
 		r.Delete("/api/v1/admin/collections/{id}/derivatives", admin.deleteDerivatives)
 		r.Get("/api/v1/admin/collections/{id}/users", admin.listCollectionUsers)
 		r.Post("/api/v1/admin/collections/{id}/users", admin.grantUsersCollectionAccess)
@@ -191,6 +192,7 @@ func NewRouter(db *pgxpool.Pool, guard *DeviceGuard, dispatcher *jobs.Dispatcher
 
 		// Video cover management
 		r.Post("/api/v1/admin/media/{id}/cover", video.uploadCover)
+		r.Delete("/api/v1/admin/media/{id}/cover", video.deleteCover)
 
 		// Artist image management
 		r.Post("/api/v1/admin/artists/{id}/image", music.uploadArtistImage)
