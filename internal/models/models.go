@@ -142,6 +142,7 @@ type PhotoItem struct {
 	MimeType             string     `json:"mime_type"`
 	ID                   int64      `json:"id"`
 	Ordinal              int64      `json:"ordinal"`
+	Missing              bool       `json:"missing,omitempty"`
 }
 
 func (item *PhotoItem) RemapLensModel() {
@@ -250,6 +251,7 @@ type VideoItemView struct {
 	BookmarkSeconds *int       `json:"bookmark_seconds,omitempty"`
 	ID              int64      `json:"id"`
 	ManualThumbnail bool       `json:"manual_thumbnail"`
+	Missing         bool       `json:"missing,omitempty"`
 }
 
 // SlideshowItem is a projection used by the slideshow endpoint.
@@ -379,6 +381,7 @@ type EpisodeView struct {
 	MimeType        string   `json:"mime_type"`
 	ID              int64    `json:"id"`
 	AlbumName       string   `json:"album_name"`
+	Missing         bool     `json:"missing,omitempty"`
 }
 
 // ShowBookmark records a user's current position within an audio show.
@@ -397,4 +400,5 @@ type TrackView struct {
 	Title           string   `json:"title"`
 	MimeType        string   `json:"mime_type"`
 	ID              int64    `json:"id"`
+	Missing         bool     `json:"missing,omitempty"`
 }

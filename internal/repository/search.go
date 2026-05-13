@@ -171,7 +171,8 @@ func SearchPhotos(ctx context.Context, db utils.DBTX, userID int64, p SearchPara
 		       pm.shutter_speed, pm.aperture, pm.iso,
 		       pm.focal_length_mm, pm.focal_length_35mm_equiv,
 		       pm.variants_generated_at,
-		       c.name
+		       c.name,
+		       (mi.missing_since IS NOT NULL) AS missing
 		FROM media_items mi
 		JOIN photo_metadata pm ON pm.media_item_id = mi.id
 		JOIN collections c ON c.id = mi.collection_id
@@ -182,7 +183,7 @@ func SearchPhotos(ctx context.Context, db utils.DBTX, userID int64, p SearchPara
 		      SELECT 1 FROM collection_access ca
 		      WHERE ca.collection_id = c.root_collection_id AND ca.user_id = $2
 		  )
-		  AND mi.missing_since IS NULL AND mi.hidden_at IS NULL
+		  AND mi.hidden_at IS NULL
 		ORDER BY (
 		    ts_rank(mi.search_vector, websearch_to_tsquery('english', $1)) +
 		    ts_rank(pm.search_vector, websearch_to_tsquery('english', $1))
@@ -203,6 +204,7 @@ func SearchPhotos(ctx context.Context, db utils.DBTX, userID int64, p SearchPara
 			&item.FocalLengthMM, &item.FocalLength35mmEquiv,
 			&item.VariantsGeneratedAt,
 			&item.CollectionName,
+			&item.Missing,
 		)
 		return item, err
 	})

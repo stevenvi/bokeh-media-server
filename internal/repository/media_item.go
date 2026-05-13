@@ -339,12 +339,13 @@ func MediaItemVideosByCollection(ctx context.Context, db utils.DBTX, collectionI
 			        vm.duration_seconds, vm.width, vm.height, vm.bitrate_kbps,
 			        vm.video_codec, vm.audio_codec, vm.transcoded_at,
 			        vm.date_string, vm.author, vm.manual_thumbnail,
-			        vb.position_seconds
+			        vb.position_seconds,
+			        (m.missing_since IS NOT NULL) AS missing
 			 FROM media_items m
 			 JOIN descendants d ON d.id = m.collection_id
 			 LEFT JOIN video_metadata vm ON vm.media_item_id = m.id
 			 LEFT JOIN video_bookmarks vb ON vb.media_item_id = m.id AND vb.user_id = $2
-			 WHERE m.missing_since IS NULL AND m.hidden_at IS NULL
+			 WHERE m.hidden_at IS NULL
 			   AND `+collectionAccessExistsFromParam+`
 			 ORDER BY m.title ASC
 			 LIMIT $3 OFFSET $4`,
@@ -357,12 +358,13 @@ func MediaItemVideosByCollection(ctx context.Context, db utils.DBTX, collectionI
 			        vm.duration_seconds, vm.width, vm.height, vm.bitrate_kbps,
 			        vm.video_codec, vm.audio_codec, vm.transcoded_at,
 			        vm.date_string, vm.author, vm.manual_thumbnail,
-			        vb.position_seconds
+			        vb.position_seconds,
+			        (m.missing_since IS NOT NULL) AS missing
 			 FROM media_items m
 			 LEFT JOIN video_metadata vm ON vm.media_item_id = m.id
 			 LEFT JOIN video_bookmarks vb ON vb.media_item_id = m.id AND vb.user_id = $2
 			 WHERE m.collection_id = $1
-			   AND m.missing_since IS NULL AND m.hidden_at IS NULL
+			   AND m.hidden_at IS NULL
 			   AND `+collectionAccessExistsFromParam+`
 			 ORDER BY m.relative_path ASC
 			 LIMIT $3 OFFSET $4`,
@@ -382,6 +384,7 @@ func MediaItemVideosByCollection(ctx context.Context, db utils.DBTX, collectionI
 			&item.VideoCodec, &item.AudioCodec, &item.TranscodedAt,
 			&dateString, &item.Author, &item.ManualThumbnail,
 			&item.BookmarkSeconds,
+			&item.Missing,
 		)
 		if dateString != nil {
 			item.Date = utils.ParseDateString(*dateString)
@@ -391,7 +394,7 @@ func MediaItemVideosByCollection(ctx context.Context, db utils.DBTX, collectionI
 }
 
 // MediaItemVideoGet returns a single video item by ID, scoped to a collection tree.
-// Returns an error (→ 404) if the item does not exist, is hidden/missing, does not belong
+// Returns an error (→ 404) if the item does not exist, is hidden, does not belong
 // to the given collection's tree, or the user lacks collection_access.
 func MediaItemVideoGet(ctx context.Context, db utils.DBTX, collectionID, itemID, userID int64) (*models.VideoItemView, error) {
 	var item models.VideoItemView
@@ -406,13 +409,14 @@ func MediaItemVideoGet(ctx context.Context, db utils.DBTX, collectionID, itemID,
 		        vm.duration_seconds, vm.width, vm.height, vm.bitrate_kbps,
 		        vm.video_codec, vm.audio_codec, vm.transcoded_at,
 		        vm.date_string, vm.author, vm.manual_thumbnail,
-		        vb.position_seconds
+		        vb.position_seconds,
+		        (m.missing_since IS NOT NULL) AS missing
 		 FROM media_items m
 		 JOIN tree t ON t.id = m.collection_id
 		 LEFT JOIN video_metadata vm ON vm.media_item_id = m.id
 		 LEFT JOIN video_bookmarks vb ON vb.media_item_id = m.id AND vb.user_id = $3
 		 WHERE m.id = $2
-		   AND m.hidden_at IS NULL AND m.missing_since IS NULL
+		   AND m.hidden_at IS NULL
 		   AND `+collectionAccessExistsFromParam,
 		collectionID, itemID, userID,
 	).Scan(
@@ -421,6 +425,7 @@ func MediaItemVideoGet(ctx context.Context, db utils.DBTX, collectionID, itemID,
 		&item.VideoCodec, &item.AudioCodec, &item.TranscodedAt,
 		&dateString, &item.Author, &item.ManualThumbnail,
 		&item.BookmarkSeconds,
+		&item.Missing,
 	)
 	if err != nil {
 		return nil, err
@@ -469,11 +474,11 @@ func PhotoItems(ctx context.Context, db utils.DBTX, q PhotoQuery) ([]models.Phot
 		       pm.camera_make, pm.camera_model, pm.lens_model,
 		       pm.shutter_speed, pm.aperture, pm.iso,
 		       pm.focal_length_mm, pm.focal_length_35mm_equiv,
-		       pm.variants_generated_at
+		       pm.variants_generated_at,
+		       (mi.missing_since IS NOT NULL) AS missing
 		FROM media_items mi
 		JOIN photo_metadata pm ON pm.media_item_id = mi.id
 		WHERE %s
-		  AND mi.missing_since IS NULL
 		  AND mi.hidden_at IS NULL
 		ORDER BY pm.created_at %s NULLS LAST, mi.id %s
 		LIMIT $2 OFFSET $3`,
@@ -493,6 +498,7 @@ func PhotoItems(ctx context.Context, db utils.DBTX, q PhotoQuery) ([]models.Phot
 			&item.ShutterSpeed, &item.Aperture, &item.ISO,
 			&item.FocalLengthMM, &item.FocalLength35mmEquiv,
 			&item.VariantsGeneratedAt,
+			&item.Missing,
 		)
 		return item, err
 	})

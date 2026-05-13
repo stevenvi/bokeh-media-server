@@ -46,14 +46,15 @@ func ShowEpisodesByArtist(ctx context.Context, db utils.DBTX, artistID, collecti
 		     m.title,
 		     m.mime_type,
 		     m.id,
-		     aa.name          AS album_name
+		     aa.name          AS album_name,
+		     (m.missing_since IS NOT NULL) AS missing
 		 FROM audio_metadata am
 		 JOIN media_items m ON m.id = am.media_item_id
 		 LEFT JOIN artists ep_artist ON ep_artist.id = am.artist_id
 		 JOIN audio_albums aa ON aa.id = am.album_id
 		 WHERE aa.artist_id = $1
 		   AND aa.root_collection_id = $2
-		   AND m.missing_since IS NULL AND m.hidden_at IS NULL
+		   AND m.hidden_at IS NULL
 		   AND EXISTS (
 		       SELECT 1 FROM collection_access ca
 		       WHERE ca.collection_id = $2 AND ca.user_id = $3

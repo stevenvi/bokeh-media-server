@@ -67,20 +67,21 @@ func AlbumTrackRelPathsWithEmbeddedArt(ctx context.Context, db utils.DBTX, album
 // Access is verified against the album's root_collection_id.
 func AudioTracksByAlbum(ctx context.Context, db utils.DBTX, albumID, userID int64) ([]models.TrackView, error) {
 	rows, err := db.Query(ctx,
-		`SELECT 
-			am.track_number, 
+		`SELECT
+			am.track_number,
 			am.disc_number,
-			am.duration_seconds, 
-			a.name, 
-			m.title, 
+			am.duration_seconds,
+			a.name,
+			m.title,
 			m.mime_type,
-			m.id
+			m.id,
+			(m.missing_since IS NOT NULL) AS missing
 		 FROM audio_metadata am
 		 JOIN media_items m ON m.id = am.media_item_id
 		 LEFT JOIN artists a ON a.id = am.artist_id
 		 JOIN audio_albums al ON al.id = am.album_id
 		 WHERE am.album_id = $1
-		   AND m.missing_since IS NULL AND m.hidden_at IS NULL
+		   AND m.hidden_at IS NULL
 		   AND EXISTS (
 		       SELECT 1 FROM collection_access ca
 		       WHERE ca.collection_id = al.root_collection_id

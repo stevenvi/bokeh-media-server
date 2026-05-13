@@ -156,7 +156,7 @@ func TestSearchPhotos(t *testing.T) {
 		assert.NotContains(t, got, aliceItem)
 	})
 
-	t.Run("excludes_hidden_and_missing_items", func(t *testing.T) {
+	t.Run("excludes_hidden_includes_missing_with_flag", func(t *testing.T) {
 		db := testutil.NewTx(t, testPool)
 		userID := createUser(t, db)
 		collID := createCollection(t, db, constants.CollectionTypePhoto)
@@ -171,9 +171,17 @@ func TestSearchPhotos(t *testing.T) {
 		hits, err := repository.SearchPhotos(bg(), db, userID, repository.SearchParams{Query: "sunset", Limit: 50})
 		require.NoError(t, err)
 		got := photoIDs(hits)
-		assert.Equal(t, []int64{visible}, got)
+		assert.ElementsMatch(t, []int64{visible, missing}, got)
 		assert.NotContains(t, got, hidden)
-		assert.NotContains(t, got, missing)
+
+		for _, h := range hits {
+			switch h.ID {
+			case visible:
+				assert.False(t, h.Missing, "visible item should not be flagged missing")
+			case missing:
+				assert.True(t, h.Missing, "missing item should be flagged")
+			}
+		}
 	})
 
 	t.Run("pagination_is_stable_under_tied_ranks", func(t *testing.T) {
