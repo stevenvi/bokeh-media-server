@@ -129,6 +129,7 @@ func (h *musicHandler) stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setMediaCacheHeaders(w, r)
 	w.Header().Set("Content-Type", mimeType)
 	http.ServeFile(w, r, filepath.Join(h.mediaPath, relativePath))
 }

@@ -170,6 +170,7 @@ func (h *photosHandler) serveVariant(w http.ResponseWriter, r *http.Request) {
 
 	for _, v := range fallbackChain {
 		if v == variantOriginal {
+			setMediaCacheHeaders(w, r)
 			http.ServeFile(w, r, fsPath)
 			return
 		}
@@ -181,6 +182,7 @@ func (h *photosHandler) serveVariant(w http.ResponseWriter, r *http.Request) {
 
 		// Serve WebP directly unless client only accepts JPEG.
 		if !strings.Contains(accept, "image/jpeg") || strings.Contains(accept, "image/webp") {
+			setMediaCacheHeaders(w, r)
 			http.ServeFile(w, r, webpPath)
 			return
 		}
@@ -191,6 +193,7 @@ func (h *photosHandler) serveVariant(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "image conversion failed")
 			return
 		}
+		setMediaCacheHeaders(w, r)
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(jpegBytes)
@@ -227,6 +230,7 @@ func (h *photosHandler) serveDZIManifest(w http.ResponseWriter, r *http.Request)
 	}
 
 	dziPath := filepath.Join(imaging.TilesPath(h.dataPath, hash), "image.dzi")
+	setMediaCacheHeaders(w, r)
 	http.ServeFile(w, r, dziPath)
 }
 
@@ -256,6 +260,7 @@ func (h *photosHandler) serveDZITile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setMediaCacheHeaders(w, r)
 	http.ServeFile(w, r, fullPath)
 }
 

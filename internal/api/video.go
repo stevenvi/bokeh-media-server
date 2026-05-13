@@ -136,6 +136,7 @@ func (h *videoHandler) hlsManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setMediaCacheHeaders(w, r)
 	http.ServeFile(w, r, manifestPath)
 }
 
@@ -168,6 +169,7 @@ func (h *videoHandler) hlsSegment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	setMediaCacheHeaders(w, r)
 	http.ServeFile(w, r, segPath)
 }
 

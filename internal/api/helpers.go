@@ -11,6 +11,18 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// setMediaCacheHeaders sets Cache-Control for content-derivative media responses.
+// A non-empty ?v= query param signals the client is using a content fingerprint
+// to cache-bust, so the response can be cached indefinitely as immutable.
+// Without it, the browser revalidates hourly via Last-Modified (cheap 304s).
+func setMediaCacheHeaders(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("v") != "" {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		return
+	}
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+}
+
 // urlIntParam extracts a chi URL parameter and parses it as int64.
 // On failure it writes a 400 error and returns 0, false.
 func urlIntParam(w http.ResponseWriter, r *http.Request, name string) (int64, bool) {
