@@ -131,6 +131,38 @@ func VideoSetTranscodedAt(ctx context.Context, db utils.DBTX, itemID int64, t ti
 	return err
 }
 
+// VideoThumbnailItem holds the fields needed to (re)extract a video cover image.
+type VideoThumbnailItem struct {
+	DurationSeconds *int   `json:"duration_seconds"`
+	RelativePath    string `json:"relative_path"`
+	FileHash        string `json:"file_hash"`
+	ItemID          int64  `json:"media_item_id"`
+	ManualThumbnail bool   `json:"manual_thumbnail"`
+}
+
+// VideoItemsForThumbnailScan returns video items in the given root collection
+// and all its descendants. Used by thumbnail_scan to regenerate missing covers.
+// Filters out missing/hidden items.
+func VideoItemsForThumbnailScan(ctx context.Context, db utils.DBTX, collectionID int64) ([]VideoThumbnailItem, error) {
+	rows, err := db.Query(ctx,
+		`WITH RECURSIVE tree AS (
+			SELECT id FROM collections WHERE id = $1
+			UNION ALL
+			SELECT c.id FROM collections c JOIN tree t ON c.parent_collection_id = t.id
+		)
+		SELECT vm.duration_seconds, mi.relative_path, mi.file_hash, mi.id, vm.manual_thumbnail
+		FROM video_metadata vm
+		JOIN media_items mi ON mi.id = vm.media_item_id
+		JOIN tree t ON mi.collection_id = t.id
+		WHERE mi.missing_since IS NULL AND mi.hidden_at IS NULL`,
+		collectionID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[VideoThumbnailItem])
+}
+
 // VideoHasManualThumbnail returns true if manual_thumbnail is false for the item,
 // meaning auto-generated cover art is appropriate. Returns false (not manual)
 // if no row exists yet (first processing run).

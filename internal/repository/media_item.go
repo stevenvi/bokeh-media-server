@@ -195,6 +195,11 @@ func MediaItemHashesByCollection(ctx context.Context, db utils.DBTX, collectionI
 // MediaItemRandomHashWithVariants picks a random item with generated variants,
 // starting with the collection's direct items and expanding one depth level at a time.
 // It searches up to 8 nested levels; returns pgx.ErrNoRows if nothing is found.
+//
+// The result is restricted to items whose source is large enough that the
+// thumb variant (400px long edge) was actually written to disk — items at or
+// below 400px on every edge have variants_generated_at set but no thumb.webp,
+// so callers that load the thumb as a source would fail.
 func MediaItemRandomHashWithVariants(ctx context.Context, db utils.DBTX, collectionID int64) (string, error) {
 	collectionIDs := []int64{collectionID}
 
@@ -212,6 +217,7 @@ func MediaItemRandomHashWithVariants(ctx context.Context, db utils.DBTX, collect
 			   AND mi.missing_since IS NULL
 			   AND mi.hidden_at IS NULL
 			   AND pm.variants_generated_at IS NOT NULL
+			   AND GREATEST(COALESCE(pm.width_px, 0), COALESCE(pm.height_px, 0)) > 400
 			 ORDER BY RANDOM()
 			 LIMIT 1`,
 			collectionIDs,

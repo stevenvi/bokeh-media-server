@@ -83,15 +83,7 @@ func HandleScanVideo(mediaPath, dataPath string, transcodeBitrateKbps int) jobs.
 		exifDate := createdAt(fsPath, exifData)
 
 		// Cover art bytes — extracted separately via exiftool -b
-		var coverArtBytes []byte
-		if _, hasPic := exifData["Picture"]; hasPic {
-			coverArtBytes, _ = extractBinaryTag(fsPath, "-Picture")
-		}
-		if len(coverArtBytes) == 0 {
-			if _, hasCover := exifData["CoverArt"]; hasCover {
-				coverArtBytes, _ = extractBinaryTag(fsPath, "-CoverArt")
-			}
-		}
+		coverArtBytes := extractVideoCoverBytes(fsPath, exifData)
 
 		// --- Step 2: root collection type for home movie filename fallback ---
 		collType, err := repository.MediaItemRootCollectionType(ctx, db, itemID)
@@ -147,25 +139,14 @@ func HandleScanVideo(mediaPath, dataPath string, transcodeBitrateKbps int) jobs.
 		}
 
 		// --- Step 4: cover art ---
-		coverWidthRatio, coverHeightRatio := 4, 3
-		if collType == constants.CollectionTypeMovie {
-			coverWidthRatio, coverHeightRatio = 2, 3
-		}
-
-		// Priority: embedded metadata art > keyframe fallback. Manual thumbnails are never overwritten.
-		// Skip cover generation entirely if a cover already exists.
+		// Manual thumbnails are never overwritten; skip generation if a cover already exists.
+		coverWidthRatio, coverHeightRatio := videoCoverAspectRatio(collType)
 		notManual, err := repository.VideoHasManualThumbnail(ctx, db, itemID)
 		if err == nil && notManual {
 			coverPath := imaging.VariantPath(dataPath, fileHash, "cover", "webp")
 			if !fileExists(coverPath) {
-				if len(coverArtBytes) > 0 {
-					if err := imaging.GenerateVideoCoverFromBytes(coverArtBytes, dataPath, fileHash, coverWidthRatio, coverHeightRatio); err != nil {
-						slog.Warn("generate video cover from embedded art", "item_id", itemID, "err", err)
-					}
-				} else if durationSeconds != nil && *durationSeconds > 0 {
-					if err := imaging.GenerateVideoCoverFromFrame(fsPath, dataPath, fileHash, *durationSeconds, coverWidthRatio, coverHeightRatio); err != nil {
-						slog.Warn("generate video cover from keyframe", "item_id", itemID, "err", err)
-					}
+				if err := generateVideoCover(coverArtBytes, fsPath, dataPath, fileHash, durationSeconds, coverWidthRatio, coverHeightRatio); err != nil {
+					slog.Warn("generate video cover", "item_id", itemID, "err", err)
 				}
 			}
 		}
@@ -200,6 +181,45 @@ func HandleScanVideo(mediaPath, dataPath string, transcodeBitrateKbps int) jobs.
 func extractBinaryTag(fsPath, tag string) ([]byte, error) {
 	cmd := exec.Command("exiftool", "-b", tag, fsPath)
 	return cmd.Output()
+}
+
+// extractVideoCoverBytes pulls the raw embedded cover image from a video file.
+// exifData is consulted first to avoid spawning exiftool -b when neither
+// Picture nor CoverArt is present.
+func extractVideoCoverBytes(fsPath string, exifData map[string]any) []byte {
+	var coverArtBytes []byte
+	if _, hasPic := exifData["Picture"]; hasPic {
+		coverArtBytes, _ = extractBinaryTag(fsPath, "-Picture")
+	}
+	if len(coverArtBytes) == 0 {
+		if _, hasCover := exifData["CoverArt"]; hasCover {
+			coverArtBytes, _ = extractBinaryTag(fsPath, "-CoverArt")
+		}
+	}
+	return coverArtBytes
+}
+
+// videoCoverAspectRatio returns the desired (width, height) ratio for a
+// video cover image given the containing collection's type. video:movie uses
+// a 2:3 poster shape; everything else uses a 4:3 frame.
+func videoCoverAspectRatio(collType constants.CollectionType) (int, int) {
+	if collType == constants.CollectionTypeMovie {
+		return 2, 3
+	}
+	return 4, 3
+}
+
+// generateVideoCover writes the per-item cover for a video. If embedded art
+// is available it's preferred; otherwise a keyframe is extracted at the given
+// duration. Returns an error only when neither path produces a cover.
+func generateVideoCover(coverArtBytes []byte, fsPath, dataPath, fileHash string, durationSeconds *int, widthRatio, heightRatio int) error {
+	if len(coverArtBytes) > 0 {
+		return imaging.GenerateVideoCoverFromBytes(coverArtBytes, dataPath, fileHash, widthRatio, heightRatio)
+	}
+	if durationSeconds != nil && *durationSeconds > 0 {
+		return imaging.GenerateVideoCoverFromFrame(fsPath, dataPath, fileHash, *durationSeconds, widthRatio, heightRatio)
+	}
+	return fmt.Errorf("no embedded cover and no duration for keyframe extraction")
 }
 
 // parseVideoBitrate reads AvgBitrate from exifData and converts to kbps.
