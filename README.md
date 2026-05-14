@@ -86,6 +86,5 @@ docker buildx build \
 | `DATA_PATH` | `./data` | Writable path for thumbnails, tiles, HLS cache |
 | `MEDIA_PATH` | `/media` | Read-only path to media library (used by Docker mount) |
 | `PORT` | `3000` | HTTP port |
-| `WORKER_COUNT` | `2` | Max parallel indexer workers |
 | `LOG_LEVEL` | `warn` | `error` / `warn` / `info` / `debug` |
 | `LOG_PATH` | stdout | Log file path (`/tmp/mediaserver.log` recommended on Pi) |

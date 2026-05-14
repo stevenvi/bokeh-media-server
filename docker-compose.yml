@@ -32,7 +32,6 @@ services:
       DATA_PATH: /data
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET}
-      WORKER_COUNT: ${WORKER_COUNT:-2}
       LOG_LEVEL: ${LOG_LEVEL:-warn}
     volumes:
       # Media library (read-only — server never modifies source files)
